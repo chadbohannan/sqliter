@@ -1,4 +1,4 @@
-module sqliter
+module github.com/chadbohannan/sqliter
 
 go 1.13
 
