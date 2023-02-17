@@ -84,7 +84,7 @@ func (s *Sqliter) ReadOne(outPtr interface{}, where string, args ...interface{})
 		return err
 	}
 	if err = s.db.Get(outPtr, q, args...); err != nil {
-		return fmt.Errorf("get record not found where %s, %s", where, err.Error())
+		return fmt.Errorf("get %s not found where %s, %s", name, where, err.Error())
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func (s *Sqliter) ReadMany(outPtr interface{}, where string, args ...interface{}
 		return err
 	}
 	if err = s.db.Select(outPtr, q, args...); err != nil {
-		return fmt.Errorf("select records err where %s, %s", where, err.Error())
+		return fmt.Errorf("select %s err where %s, %s", name, where, err.Error())
 	}
 	return nil
 }
