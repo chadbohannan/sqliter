@@ -127,9 +127,9 @@ func (s *Sqliter) Update(obj interface{}, where string, args ...interface{}) err
 func (s *Sqliter) Delete(sample interface{}, where string, args ...interface{}) error {
 	name, _, err := decomposeStruct(sample)
 	if err != nil {
-		return err
+		return fmt.Errorf("Delete decompose struct err:%w", err)
 	}
-	return s.DeleteFrom(name, where, args)
+	return s.DeleteFrom(name, where, args...)
 }
 
 func (s *Sqliter) DeleteFrom(table, where string, args ...interface{}) error {
@@ -137,6 +137,8 @@ func (s *Sqliter) DeleteFrom(table, where string, args ...interface{}) error {
 	defer s.mutex.Unlock()
 
 	q := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
-	_, err := s.db.Exec(q, args...)
-	return err
+	if _, err := s.db.Exec(q, args...); err != nil {
+		return fmt.Errorf("DeleteFrom('%s'):%w", q, err)
+	}
+	return nil
 }
