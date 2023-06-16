@@ -75,3 +75,33 @@ func TestCRUD(t *testing.T) {
 	assert.Nil(t, store.ReadMany(&allStructs, "db_a > 0 "))
 	assert.Len(t, allStructs, 2)
 }
+
+func TestUpsert(t *testing.T) {
+	type KeyValue struct {
+		Key       string `json:"key" db:"_key" attr:"UNIQUE"`
+		Value     string `json:"value" db:"value"`
+		UpdatedAt int64  `json:"updated_at" db:"updated_at"`
+	}
+
+	store, err := Open(InMemory)
+	defer store.Close()
+	assert.Nil(t, err)
+	assert.NotNil(t, store)
+
+	assert.Nil(t, store.CreateTable(KeyValue{}))
+	testKV := KeyValue{Key:"foo", Value:"bar"}
+
+	id, err := store.Upsert(&testKV, "_key = ?", "foo")
+	assert.Nil(t, err)
+	assert.Equal(t, int64(1), id)
+	assert.Nil(t, store.ReadOne(&testKV, "_key = ?", "foo"))
+	assert.Equal(t, "foo", testKV.Key)
+	assert.Equal(t, "bar", testKV.Value)
+
+	testKV.Value = "baz"
+	_, err = store.Upsert(&testKV, "_key = ?", "foo")
+	assert.Nil(t, err)
+	assert.Nil(t, store.ReadOne(&testKV, "_key = ?", "foo"))
+	assert.Equal(t, "foo", testKV.Key)
+	assert.Equal(t, "baz", testKV.Value)
+}
