@@ -98,7 +98,7 @@ func fieldsListToUpdateRecord(table string, fields []StructField) (string, []int
 	var whereKey string
 	var whereValue interface{}
 	for _, field := range fields {
-		isPrimaryKey := field.Type.Name() == "id" || strings.Contains(field.Attr, "PRIMARY KEY")
+		isPrimaryKey := field.Type.Name() == "id" || strings.Contains(field.Attr, "PRIMARY KEY") || strings.Contains(field.Attr, "UNIQUE")
 		if isPrimaryKey {
 			whereKey = field.Key
 			whereValue = field.Value
@@ -107,7 +107,12 @@ func fieldsListToUpdateRecord(table string, fields []StructField) (string, []int
 			vals = append(vals, field.Value)
 		}
 	}
-	q := "UPDATE %s SET %s WHERE %s = %v;"
+	q := ""
+	if _, ok := whereValue.(string); ok {
+		q = "UPDATE %s SET %s WHERE %s = '%s';"
+	} else{
+		q = "UPDATE %s SET %s WHERE %s = %v;"
+	}
 	return fmt.Sprintf(q, table, strings.Join(cols, ", "), whereKey, whereValue), vals, nil
 }
 

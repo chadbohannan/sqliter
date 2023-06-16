@@ -84,7 +84,7 @@ func (s *Sqliter) ReadOne(outPtr interface{}, where string, args ...interface{})
 		return err
 	}
 	if err = s.db.Get(outPtr, q, args...); err != nil {
-		return fmt.Errorf("get %s not found where %s, %s", name, where, err.Error())
+		return fmt.Errorf("get %s not found where %s, %s, %v", name, where, args, err.Error())
 	}
 	return nil
 }
@@ -122,6 +122,24 @@ func (s *Sqliter) Update(obj interface{}, where string, args ...interface{}) err
 	vals = append(vals, args...)
 	_, err = s.db.Exec(q, vals...)
 	return err
+}
+
+func (s *Sqliter) Upsert(obj interface{}, where string, args ...interface{}) (int64,error) {
+	name, _, err := decomposeStruct(obj)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	q := "SELECT COUNT(1) FROM " + name + " WHERE " + where
+	fmt.Printf("%s, %v\n", q, args)
+	if err = s.db.Get(&count, "SELECT COUNT(1) FROM " + name + " WHERE " + where, args...); err != nil {
+		return 0, fmt.Errorf("count %s where %s, %s", name, where, err.Error())
+	}
+	switch count {
+	case 0: return s.Insert(obj)
+	case 1: return 0, s.Update(obj, where, args...) // TODO return the updated record id
+	default: return 0, fmt.Errorf("upsert err: %d existing records", count)
+	}
 }
 
 func (s *Sqliter) Delete(sample interface{}, where string, args ...interface{}) error {
