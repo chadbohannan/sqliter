@@ -124,21 +124,22 @@ func (s *Sqliter) Update(obj interface{}, where string, args ...interface{}) err
 	return err
 }
 
-func (s *Sqliter) Upsert(obj interface{}, where string, args ...interface{}) (int64,error) {
+func (s *Sqliter) Upsert(obj interface{}, where string, args ...interface{}) (int64, error) {
 	name, _, err := decomposeStruct(obj)
 	if err != nil {
 		return 0, err
 	}
 	count := 0
-	q := "SELECT COUNT(1) FROM " + name + " WHERE " + where
-	fmt.Printf("%s, %v\n", q, args)
-	if err = s.db.Get(&count, "SELECT COUNT(1) FROM " + name + " WHERE " + where, args...); err != nil {
+	if err = s.db.Get(&count, "SELECT COUNT(1) FROM "+name+" WHERE "+where, args...); err != nil {
 		return 0, fmt.Errorf("count %s where %s, %s", name, where, err.Error())
 	}
 	switch count {
-	case 0: return s.Insert(obj)
-	case 1: return 0, s.Update(obj, where, args...) // TODO return the updated record id
-	default: return 0, fmt.Errorf("upsert err: %d existing records", count)
+	case 0:
+		return s.Insert(obj)
+	case 1:
+		return 0, s.Update(obj, where, args...) // TODO return the updated record id
+	default:
+		return 0, fmt.Errorf("upsert err: %d existing records", count)
 	}
 }
 

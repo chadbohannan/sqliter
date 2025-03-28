@@ -24,9 +24,15 @@ db.Insert(MyStruct{Value:"foo"})
 
 ### Read
 ```
-myStruct := &MyStruct{}
-db.ReadOne(myStruct, "id = ?", 1)
+myStruct := MyStruct{}
+db.ReadOne(&myStruct, "id = ?", 1)
 ```
+
+### ReadMany
+```
+myList := []*Mystruct{}
+db.ReadMany(&mylist, "value > ?")
+db.ReadMany(&mylist, "")
 
 ### Update
 ```

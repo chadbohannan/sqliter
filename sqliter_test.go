@@ -72,8 +72,17 @@ func TestCRUD(t *testing.T) {
 
 	// expect 2 records
 	allStructs := []*TestStruct{}
-	assert.Nil(t, store.ReadMany(&allStructs, "db_a > 0 "))
+	assert.Nil(t, store.ReadMany(&allStructs, "db_a > 0 ORDER BY db_a"))
 	assert.Len(t, allStructs, 2)
+
+	allStructs = []*TestStruct{}
+	assert.Nil(t, store.ReadMany(&allStructs, ""))
+	assert.Len(t, allStructs, 2)
+
+	oneStruct := []*TestStruct{}
+	assert.Nil(t, store.ReadMany(&oneStruct, "db_a > 1 ORDER BY db_a"))
+	assert.Len(t, oneStruct, 1)
+	assert.Equal(t, 2, oneStruct[0].A)
 }
 
 func TestUpsert(t *testing.T) {
@@ -89,7 +98,7 @@ func TestUpsert(t *testing.T) {
 	assert.NotNil(t, store)
 
 	assert.Nil(t, store.CreateTable(KeyValue{}))
-	testKV := KeyValue{Key:"foo", Value:"bar"}
+	testKV := KeyValue{Key: "foo", Value: "bar"}
 
 	id, err := store.Upsert(&testKV, "_key = ?", "foo")
 	assert.Nil(t, err)

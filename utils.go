@@ -110,17 +110,21 @@ func fieldsListToUpdateRecord(table string, fields []StructField) (string, []int
 	q := ""
 	if _, ok := whereValue.(string); ok {
 		q = "UPDATE %s SET %s WHERE %s = '%s';"
-	} else{
+	} else {
 		q = "UPDATE %s SET %s WHERE %s = %v;"
 	}
 	return fmt.Sprintf(q, table, strings.Join(cols, ", "), whereKey, whereValue), vals, nil
 }
 
 func fieldListToReadRecord(table string, fields []StructField, where string) (string, error) {
-	q := "SELECT %s FROM %s WHERE %s;"
 	cols := []string{}
 	for _, field := range fields {
 		cols = append(cols, field.Key)
 	}
-	return fmt.Sprintf(q, strings.Join(cols, ","), table, where), nil
+	if len(where) > 0 {
+		q := "SELECT %s FROM %s WHERE %s;"
+		return fmt.Sprintf(q, strings.Join(cols, ","), table, where), nil
+	}
+	q := "SELECT %s FROM %s;"
+	return fmt.Sprintf(q, strings.Join(cols, ","), table), nil
 }
