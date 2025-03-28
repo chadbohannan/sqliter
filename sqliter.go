@@ -30,7 +30,7 @@ func (s *Sqliter) Close() {
 	s.db.Close()
 }
 
-func (s *Sqliter) Exec(q string, args ...interface{}) (sql.Result, error) {
+func (s *Sqliter) Exec(q string, args ...any) (sql.Result, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.db.Exec(q, args)
