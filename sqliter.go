@@ -33,7 +33,7 @@ func (s *Sqliter) Close() {
 func (s *Sqliter) Exec(q string, args ...any) (sql.Result, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	return s.db.Exec(q, args)
+	return s.db.Exec(q, args...)
 }
 
 func (s *Sqliter) CreateTable(sample interface{}) error {
