@@ -66,7 +66,8 @@ func mapType(t reflect.Type) string {
 func fieldsListToCreateTable(table string, fields []StructField) (string, error) {
 	cols := make([]string, len(fields))
 	for i, field := range fields {
-		if len(field.Attr) > 0 {
+		attr := strings.ToLower(field.Attr)
+		if strings.Contains(attr, "key") || strings.Contains(attr, "unique") {
 			cols[i] = fmt.Sprintf("%s %s %s", field.Key, mapType(field.Type), field.Attr)
 		} else {
 			cols[i] = fmt.Sprintf("%s %s", field.Key, mapType(field.Type))
@@ -74,6 +75,17 @@ func fieldsListToCreateTable(table string, fields []StructField) (string, error)
 	}
 	q := "CREATE TABLE IF NOT EXISTS %s (%s);"
 	return fmt.Sprintf(q, table, strings.Join(cols, ", ")), nil
+}
+
+func fieldsListToCreateIndexList(table string, fields []StructField) ([]string, error) {
+	createStrings := []string{}
+	for _, field := range fields {
+		if strings.Contains(strings.ToLower(field.Attr), "index") {
+			fmtStr := "CREATE INDEX IF NOT EXISTS idx_%s_%s ON %s (%s);"
+			createStrings = append(createStrings, fmt.Sprintf(fmtStr, table, field.Key, table, field.Key))
+		}
+	}
+	return createStrings, nil
 }
 
 func fieldsListToInsertRecord(table string, fields []StructField) (string, []interface{}, error) {
@@ -98,7 +110,9 @@ func fieldsListToUpdateRecord(table string, fields []StructField) (string, []int
 	var whereKey string
 	var whereValue interface{}
 	for _, field := range fields {
-		isPrimaryKey := field.Type.Name() == "id" || strings.Contains(field.Attr, "PRIMARY KEY") || strings.Contains(field.Attr, "UNIQUE")
+		isPrimaryKey := field.Type.Name() == "id" ||
+			strings.Contains(strings.ToLower(field.Attr), "primary key") ||
+			strings.Contains(strings.ToLower(field.Attr), "unique")
 		if isPrimaryKey {
 			whereKey = field.Key
 			whereValue = field.Value

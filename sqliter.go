@@ -16,6 +16,7 @@ type Sqliter struct {
 	mutex sync.RWMutex
 }
 
+// Open a file on disk or 'sqliter.InMemory'
 func Open(filename string) (*Sqliter, error) {
 	if db, err := sqlx.Connect("sqlite3", filename); err == nil {
 		return &Sqliter{db: db}, nil
@@ -24,18 +25,22 @@ func Open(filename string) (*Sqliter, error) {
 	}
 }
 
+// Close cleans up db resources
 func (s *Sqliter) Close() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.db.Close()
 }
 
+// Exec SQL on the db
 func (s *Sqliter) Exec(q string, args ...any) (sql.Result, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	return s.db.Exec(q, args...)
 }
 
+// CreateTable takes an example object (or nill pointer to its type)
+// and runs CREATE TABLE IF NOT EXISTS with columns read from typej.
 func (s *Sqliter) CreateTable(sample interface{}) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -48,10 +53,24 @@ func (s *Sqliter) CreateTable(sample interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(q)
-	return err
+	if _, err = s.db.Exec(q); err != nil {
+		return err
+	}
+
+	createIndexList, err := fieldsListToCreateIndexList(name, fields)
+	if err != nil {
+		return err
+	}
+
+	for _, createIndexStr := range createIndexList {
+		if _, err = s.db.Exec(createIndexStr); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
+// Insert a record. You must first call CreateTable with the type.
 func (s *Sqliter) Insert(obj interface{}) (int64, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -71,6 +90,7 @@ func (s *Sqliter) Insert(obj interface{}) (int64, error) {
 	return r.LastInsertId()
 }
 
+// Read a single record. Use where clause to specify which one.
 func (s *Sqliter) ReadOne(outPtr interface{}, where string, args ...interface{}) error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -89,6 +109,8 @@ func (s *Sqliter) ReadOne(outPtr interface{}, where string, args ...interface{})
 	return nil
 }
 
+// Read several records. Use where clause to specify which ones and also
+// to inject OFFSET and LIMIT clauses.
 func (s *Sqliter) ReadMany(outPtr interface{}, where string, args ...interface{}) error {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -107,6 +129,7 @@ func (s *Sqliter) ReadMany(outPtr interface{}, where string, args ...interface{}
 	return nil
 }
 
+// Update modifies a record. The obj must have an attr:"PRIMARY KEY" set on a field.
 func (s *Sqliter) Update(obj interface{}, where string, args ...interface{}) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -124,6 +147,8 @@ func (s *Sqliter) Update(obj interface{}, where string, args ...interface{}) err
 	return err
 }
 
+// Upsert attempts to modify an existing record before inserting. The obj string must
+// have attr:"PRIMARY KEY" set on a field
 func (s *Sqliter) Upsert(obj interface{}, where string, args ...interface{}) (int64, error) {
 	name, _, err := decomposeStruct(obj)
 	if err != nil {
@@ -143,6 +168,7 @@ func (s *Sqliter) Upsert(obj interface{}, where string, args ...interface{}) (in
 	}
 }
 
+// Delete from the obj table all records matching the where clause
 func (s *Sqliter) Delete(sample interface{}, where string, args ...interface{}) error {
 	name, _, err := decomposeStruct(sample)
 	if err != nil {
@@ -151,6 +177,7 @@ func (s *Sqliter) Delete(sample interface{}, where string, args ...interface{}) 
 	return s.DeleteFrom(name, where, args...)
 }
 
+// Delete from the specified table all records matching the where clause
 func (s *Sqliter) DeleteFrom(table, where string, args ...interface{}) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

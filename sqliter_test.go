@@ -1,7 +1,10 @@
 package sqliter
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -113,4 +116,62 @@ func TestUpsert(t *testing.T) {
 	assert.Nil(t, store.ReadOne(&testKV, "_key = ?", "foo"))
 	assert.Equal(t, "foo", testKV.Key)
 	assert.Equal(t, "baz", testKV.Value)
+}
+
+func TestIndexing(t *testing.T) {
+	type MyStruct struct {
+		ID     int64  `db:"id" attr:"PRIMARY KEY"`
+		Idx    int    `db:"idx"`
+		Value1 string `db:"value1" `
+		Value2 string `db:"value2" attr:"INDEX"`
+	}
+
+	randSeq := func(n int) string {
+		var letters = []rune("abcdefghijklmnopqrstuvwxyz")
+		b := make([]rune, n)
+		for i := range b {
+			b[i] = letters[rand.Intn(len(letters))]
+		}
+		return string(b)
+	}
+	db, err := Open(InMemory)
+	if err != nil {
+		t.Fatalf("on open: %s\n", err.Error())
+		return
+	}
+	if err = db.CreateTable(&MyStruct{}); err != nil {
+		t.Fatalf("on create table: %s\n", err.Error())
+		return
+	}
+
+	N := 10000
+	for i := 0; i < N; i++ {
+		data := MyStruct{
+			Idx:    i,
+			Value1: randSeq(32),
+			Value2: randSeq(32),
+		}
+		if _, err = db.Insert(data); err != nil {
+			t.Fatalf("on Insert, %s\n", err.Error())
+			return
+		}
+	}
+
+	t0 := time.Now()
+	myList := []*MyStruct{}
+	if err = db.ReadMany(&myList, "idx > 0 ORDER BY value1 LIMIT 3"); err != nil {
+		t.Fatalf("on ReadMany value 2, %s\n", err.Error())
+		return
+	}
+	durNoIdx := time.Since(t0)
+
+	t1 := time.Now()
+	myList = []*MyStruct{}
+	if err = db.ReadMany(&myList, "idx > 0 ORDER BY value2 LIMIT 3"); err != nil {
+		fmt.Printf("on ReadMany value2: %s\n", err.Error())
+		return
+	}
+	durIdx := time.Since(t1)
+
+	assert.Greater(t, durNoIdx/2, durIdx)
 }
